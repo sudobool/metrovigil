@@ -2,7 +2,7 @@
 
 **Software System to check compliance of Packaged Commodities under Legal Metrology (Packaged Commodities) Rules, 2011 by scanning products, images and labels.**
 
-> **Smart India Hackathon 2026** | **Problem Statement:** SIH26035  
+> **Smart India Hackathon 2026** | **Problem Statement:** SIH26034  
 > **Ministry:** Ministry of Consumer Affairs, Food & Public Distribution  
 > **Theme:** Agriculture, FoodTech & Rural Development
 

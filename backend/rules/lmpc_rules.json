@@ -1,0 +1,79 @@
+{
+  "version": "2.0",
+  "act": "Legal Metrology Act, 2009",
+  "rules": "Legal Metrology (Packaged Commodities) Rules, 2011",
+  "last_amended": "2017",
+  "mandatory_declarations": [
+    {
+      "rule": "6(1)(a)",
+      "field": "manufacturer_name",
+      "description": "Name and address of manufacturer or packer",
+      "required": true,
+      "severity": "critical"
+    },
+    {
+      "rule": "6(1)(b)",
+      "field": "generic_name",
+      "description": "Common or generic name of the commodity",
+      "required": true,
+      "severity": "critical"
+    },
+    {
+      "rule": "6(1)(c)",
+      "field": "net_quantity",
+      "description": "Net quantity of commodity in standard unit of weight or measure",
+      "required": true,
+      "severity": "critical",
+      "valid_units": ["g", "kg", "mg", "ml", "l", "L", "cl", "nos", "pieces", "pairs", "sets", "m", "cm", "mm"]
+    },
+    {
+      "rule": "6(1)(d)",
+      "field": "mfg_date",
+      "description": "Month and year of manufacture or pre-packing or import",
+      "required": true,
+      "severity": "critical"
+    },
+    {
+      "rule": "6(1)(e)",
+      "field": "mrp",
+      "description": "Maximum retail price inclusive of all taxes",
+      "required": true,
+      "severity": "critical",
+      "must_contain": ["MRP", "inclusive of all taxes"]
+    },
+    {
+      "rule": "6(1)(f)",
+      "field": "consumer_care",
+      "description": "Consumer care details - name, address, phone/email",
+      "required": true,
+      "severity": "major"
+    },
+    {
+      "rule": "6(1)(g)",
+      "field": "country_of_origin",
+      "description": "Country of origin for imported packages",
+      "required": false,
+      "conditional": "imported_product",
+      "severity": "critical"
+    },
+    {
+      "rule": "6(2)",
+      "field": "unit_sale_price",
+      "description": "Unit sale price (effective from 1st Jan 2024)",
+      "required": true,
+      "severity": "major",
+      "effective_from": "2024-01-01"
+    }
+  ],
+  "font_height_table": [
+    {"pdp_area_min": 0, "pdp_area_max": 50, "min_height_mm": 1},
+    {"pdp_area_min": 50, "pdp_area_max": 100, "min_height_mm": 2},
+    {"pdp_area_min": 100, "pdp_area_max": 500, "min_height_mm": 4},
+    {"pdp_area_min": 500, "pdp_area_max": 999999, "min_height_mm": 6}
+  ],
+  "font_width_ratio": 0.333,
+  "declaration_placement": {
+    "rule": "8",
+    "description": "All mandatory declarations must appear on the Principal Display Panel"
+  }
+}

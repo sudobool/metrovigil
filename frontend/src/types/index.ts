@@ -31,6 +31,11 @@ export interface ScanDetail extends Scan {
   fields: ExtractedField[];
   violations: Violation[];
   filename: string;
+  // Where the extracted data came from: "gemini" / "tesseract" (live AI/OCR),
+  // "demo_fallback" (offline sample data for a bundled sample label), or
+  // "failed" (nothing could be extracted).
+  extraction_source?: 'gemini' | 'tesseract' | 'demo_fallback' | 'failed' | null;
+  extraction_message?: string | null;
 }
 
 export interface DashboardStats {

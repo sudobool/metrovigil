@@ -1,3 +1,4 @@
+import logging
 import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
@@ -7,6 +8,11 @@ from fastapi.staticfiles import StaticFiles
 from .models.database import init_db
 from .routers import auth, scan, reports, dashboard
 from .config import UPLOAD_DIR
+
+logging.basicConfig(
+    level=os.getenv("LOG_LEVEL", "INFO"),
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+)
 
 
 @asynccontextmanager

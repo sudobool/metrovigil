@@ -1,6 +1,10 @@
+import logging
+
 import cv2
 import numpy as np
 import pytesseract
+
+logger = logging.getLogger("metrovigil.cv")
 
 def detect_pdp_area(image_path: str) -> dict:
     try:
@@ -32,7 +36,7 @@ def detect_pdp_area(image_path: str) -> dict:
             "contour": largest_contour.tolist() if isinstance(largest_contour, np.ndarray) else []
         }
     except Exception as e:
-        print(f"CV error in detect_pdp_area: {e}")
+        logger.warning("CV error in detect_pdp_area: %s", e)
         return {}
 
 def classify_package_shape_contour(contour) -> str:
@@ -117,6 +121,6 @@ def estimate_font_height(image_path: str) -> dict:
             
         return {}
     except Exception as e:
-        print(f"CV error in estimate_font_height: {e}")
+        logger.warning("CV error in estimate_font_height: %s", e)
         return {}
 

@@ -59,15 +59,28 @@ const ScanPage: React.FC = () => {
       });
 
       clearInterval(stepInterval);
+      if (data.status === 'failed' || data.extraction_source === 'failed') {
+        // Nothing could be read from the image — say so plainly instead
+        // of showing a "0% compliant" result for a label we never
+        // actually analyzed.
+        setError(
+          data.extraction_message ||
+            'Could not extract label text from this image. Try a clearer photo, or use one of the sample labels below.'
+        );
+        setIsProcessing(false);
+        return;
+      }
       setResult(data);
       setProgress(100);
       setProcessStep('Complete!');
       setIsProcessing(false);
-    } catch (err) {
+    } catch (err: any) {
       clearInterval(stepInterval);
       console.error('Scan error:', err);
+      const detail = err?.response?.data?.detail;
       setError(
-        'An error occurred during scanning. Make sure the backend server is running at http://localhost:8000'
+        detail ||
+          'An error occurred during scanning. Make sure the backend server is running at http://localhost:8000'
       );
       setIsProcessing(false);
     }
@@ -104,12 +117,24 @@ const ScanPage: React.FC = () => {
     setProcessStep('');
   };
 
-  const handleDownloadPdf = () => {
-    if (result) apiService.downloadPdfReport(result.id);
+  const handleDownloadPdf = async () => {
+    if (!result) return;
+    try {
+      await apiService.downloadPdfReport(result.id);
+    } catch (err) {
+      console.error('PDF download failed:', err);
+      setError('Could not download the PDF report. Please try again.');
+    }
   };
 
-  const handleDownloadDocx = () => {
-    if (result) apiService.downloadDocxReport(result.id);
+  const handleDownloadDocx = async () => {
+    if (!result) return;
+    try {
+      await apiService.downloadDocxReport(result.id);
+    } catch (err) {
+      console.error('DOCX download failed:', err);
+      setError('Could not download the DOCX report. Please try again.');
+    }
   };
 
   const displayProductName = result?.product_name || result?.original_filename || 'Package Label';
@@ -312,6 +337,20 @@ const ScanPage: React.FC = () => {
       {/* Results */}
       {result && (
         <div className="space-y-6">
+          {/* Offline demo-data notice */}
+          {result.extraction_source === 'demo_fallback' && (
+            <div className="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-md flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" />
+              <div>
+                <h3 className="text-amber-800 font-medium">Showing offline demo data</h3>
+                <p className="text-amber-700 text-sm mt-1">
+                  {result.extraction_message ||
+                    'Live AI extraction was unavailable, so this is offline demo data for this sample label — not a live scan of the uploaded image.'}
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Score + Image + Actions */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex justify-between items-center flex-wrap gap-4">

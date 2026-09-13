@@ -14,26 +14,33 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+function downloadBlob(data: Blob, filename: string) {
+  const url = window.URL.createObjectURL(data);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+}
+
 export const apiService = {
   // ── Authentication ──
-  login: async (username: string, role: string) => {
-    try {
-      const response = await api.post<{ token: string; user: User }>('/auth/login', {
-        username,
-        role,
-      });
-      const { token, user } = response.data;
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(user));
-      return { token, user };
-    } catch {
-      // Fallback for demo if backend is not running
-      const mockToken = 'demo_token_' + Date.now();
-      const user: User = { username, role: role as User['role'] };
-      localStorage.setItem('token', mockToken);
-      localStorage.setItem('user', JSON.stringify(user));
-      return { token: mockToken, user };
-    }
+  login: async (username: string, password: string, role: string) => {
+    // No more silent "pretend login succeeded" fallback when the backend
+    // is unreachable — that used to let anyone in without checking
+    // anything. If the request fails (wrong password, backend down,
+    // etc.) the error is now surfaced to the caller instead.
+    const response = await api.post<{ token: string; user: User }>('/auth/login', {
+      username,
+      password,
+      role,
+    });
+    const { token, user } = response.data;
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(user));
+    return { token, user };
   },
 
   logout: () => {
@@ -99,11 +106,18 @@ export const apiService = {
   },
 
   // ── Reports ──
-  downloadPdfReport: (scanId: number) => {
-    window.open(`/api/reports/${scanId}/pdf`, '_blank');
+  // These download endpoints require a logged-in user, so we can't just
+  // window.open() the URL (a plain browser navigation carries no
+  // Authorization header). Instead we fetch the file through axios (which
+  // attaches the bearer token via the interceptor above) and turn the
+  // response into a real file download.
+  downloadPdfReport: async (scanId: number) => {
+    const response = await api.get(`/reports/${scanId}/pdf`, { responseType: 'blob' });
+    downloadBlob(response.data, `metrovigil_report_${scanId}.pdf`);
   },
 
-  downloadDocxReport: (scanId: number) => {
-    window.open(`/api/reports/${scanId}/docx`, '_blank');
+  downloadDocxReport: async (scanId: number) => {
+    const response = await api.get(`/reports/${scanId}/docx`, { responseType: 'blob' });
+    downloadBlob(response.data, `metrovigil_report_${scanId}.docx`);
   },
 };

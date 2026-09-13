@@ -8,12 +8,26 @@ Two-tier approach:
 
 import base64
 import json
+import logging
 import re
 import os
 import cv2
 import pytesseract
 
 from ..config import GEMINI_API_KEY
+
+logger = logging.getLogger("metrovigil.ocr")
+
+# The demo/offline fallback below only ever recognizes these exact bundled
+# sample images (see sample_labels/) — it never guesses based on a loose
+# substring match against whatever filename a real user happens to upload,
+# so it can't silently kick in for genuine label photos.
+KNOWN_SAMPLE_LABELS = {
+    "sample_1_compliant.png": "compliant",
+    "sample_2_missing_mrp.png": "missing_mrp",
+    "sample_3_missing_mfg_address.png": "missing_mfg_address",
+    "sample_4_missing_origin_import.png": "missing_origin_import",
+}
 
 # ── Gemini Vision API Extraction ──────────────────────────────────────
 
@@ -96,7 +110,7 @@ def extract_fields_gemini(image_path: str) -> dict:
         return json.loads(text.strip())
 
     except Exception as e:
-        print(f"Gemini API error: {e}")
+        logger.warning("Gemini Vision API extraction failed: %s", e)
         return {}
 
 
@@ -170,18 +184,28 @@ def extract_fields_tesseract(image_path: str) -> dict:
         return result
 
     except Exception as e:
-        print(f"Tesseract OCR error: {e}")
+        logger.warning("Tesseract OCR extraction failed: %s", e)
         return {}
 
 
-def extract_fields_demo_heuristic(image_path: str) -> dict:
+def extract_fields_demo_heuristic(image_path: str, original_filename: str = "") -> dict:
     """
-    Fallback for offline demo environments when neither Gemini API key nor
-    system-level Tesseract binary is installed. Recognizes sample labels or
-    simulates realistic field extraction for offline evaluation.
+    Offline fallback used ONLY when neither Gemini nor Tesseract could
+    extract anything AND the uploaded file is exactly one of the four
+    bundled sample_labels/ images. Returns pre-written field data for that
+    specific sample so the demo still works without an API key or a
+    Tesseract install. This never fires for a user's own photos — it
+    matches on the exact known sample filenames, not a loose keyword guess.
+
+    `original_filename` is the name the file had before it was saved under
+    a randomized on-disk name (see scan.py) — the demo match needs to be
+    against that, not the randomized storage filename.
     """
-    fname = os.path.basename(image_path).lower()
-    if "sample_1_compliant" in fname or "sample_compliant" in fname or "compliant" in fname:
+    fname = os.path.basename(original_filename or image_path).lower()
+    if fname not in KNOWN_SAMPLE_LABELS:
+        return {}
+
+    if KNOWN_SAMPLE_LABELS[fname] == "compliant":
         return {
             "product_name": "Himalayan Premium Almonds",
             "generic_name": "Roasted California Almonds",
@@ -200,7 +224,7 @@ def extract_fields_demo_heuristic(image_path: str) -> dict:
             "estimated_label_area_cm2": 250.0,
             "font_size_adequate": True
         }
-    elif "sample_2_missing_mrp" in fname or "missing_mrp" in fname:
+    elif KNOWN_SAMPLE_LABELS[fname] == "missing_mrp":
         return {
             "product_name": "Golden Harvest Wheat Atta",
             "generic_name": "Whole Wheat Flour (Atta)",
@@ -214,7 +238,7 @@ def extract_fields_demo_heuristic(image_path: str) -> dict:
             "is_imported": False,
             "declarations_on_pdp": True
         }
-    elif "sample_3_missing_mfg_address" in fname or "missing_mfg" in fname:
+    elif KNOWN_SAMPLE_LABELS[fname] == "missing_mfg_address":
         return {
             "product_name": "Royal Taste Namkeen",
             "generic_name": "Spicy Bhujia Sev",
@@ -228,7 +252,7 @@ def extract_fields_demo_heuristic(image_path: str) -> dict:
             "is_imported": False,
             "declarations_on_pdp": True
         }
-    elif "sample_4_missing_origin_import" in fname or "origin" in fname:
+    elif KNOWN_SAMPLE_LABELS[fname] == "missing_origin_import":
         return {
             "product_name": "Swiss Luxury Chocolate Bar",
             "generic_name": "Dark Milk Chocolate 70%",
@@ -247,25 +271,57 @@ def extract_fields_demo_heuristic(image_path: str) -> dict:
 
 # ── Unified Extraction ────────────────────────────────────────────────
 
-def extract_fields(image_path: str) -> dict:
+def extract_fields(image_path: str, original_filename: str = "") -> tuple[dict, str, str]:
     """
     Extract all mandatory declaration fields from a product label image.
-    Tries Gemini Vision API first, falls back to Tesseract OCR, then demo heuristics.
+
+    Tries Gemini Vision API first, falls back to Tesseract OCR, then (only
+    for the bundled sample_labels/ images) offline demo data.
+
+    Returns (fields, source, message) where source is one of:
+      "gemini"        — extracted live via Google Gemini Vision API
+      "tesseract"      — extracted live via local Tesseract OCR
+      "demo_fallback"  — real extraction failed; showing pre-written
+                          offline demo data for a recognized sample label
+      "failed"         — real extraction failed and this isn't a
+                          recognized sample label, so no data is available
+    `message` is a short, user-facing explanation suitable for display in
+    the UI (e.g. "Showing offline demo data for this sample label" or
+    "Could not read this label automatically").
     """
     # 1. Try Gemini Vision API first (high accuracy)
     result = extract_fields_gemini(image_path)
     if result and any(result.get(k) for k in ["product_name", "mrp", "net_quantity"]):
-        return result
+        return result, "gemini", "Extracted live using Google Gemini Vision AI."
 
     # 2. Fallback to Tesseract OCR
     tess_result = extract_fields_tesseract(image_path)
     if tess_result and any(tess_result.get(k) for k in ["mrp", "net_quantity", "mfg_date"]):
-        return tess_result
+        return tess_result, "tesseract", "Extracted live using local Tesseract OCR."
 
-    # 3. Fallback for sample demo images when offline / no API key
-    demo_result = extract_fields_demo_heuristic(image_path)
+    # 3. Fallback for the bundled sample demo images only, when live
+    #    extraction genuinely failed (no API key / no Tesseract binary /
+    #    unreadable image).
+    demo_result = extract_fields_demo_heuristic(image_path, original_filename)
     if demo_result:
-        return demo_result
+        logger.info(
+            "Live extraction unavailable for %s — using offline demo data.",
+            os.path.basename(original_filename or image_path),
+        )
+        return (
+            demo_result,
+            "demo_fallback",
+            "Live AI extraction was unavailable, so this is offline demo data "
+            "for this sample label — not a live scan of the uploaded image.",
+        )
 
-    return tess_result or {}
+    # Nothing worked and this isn't a recognized sample — be honest about it
+    # instead of silently returning an (almost) empty result that the rule
+    # engine would otherwise flag as "everything is missing".
+    return (
+        {},
+        "failed",
+        "Could not extract label text from this image. Try a clearer, "
+        "well-lit photo of the label, or use one of the sample labels below.",
+    )
 

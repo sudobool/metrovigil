@@ -47,6 +47,8 @@ class ViolationResponse(BaseModel):
 class ScanDetailResponse(ScanResponse):
     fields: List[ExtractedFieldResponse] = []
     violations: List[ViolationResponse] = []
+    extraction_source: Optional[str] = None
+    extraction_message: Optional[str] = None
 
 class ViolationBreakdown(BaseModel):
     rule_number: str
@@ -62,7 +64,8 @@ class DashboardStatsResponse(BaseModel):
 
 class LoginRequest(BaseModel):
     username: str
-    role: str
+    password: str
+    role: Optional[str] = None  # informational only; the server derives the real role
 
 class UserResponse(BaseModel):
     username: str

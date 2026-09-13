@@ -108,6 +108,29 @@ const ReportViewPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [imageCandidateIdx, setImageCandidateIdx] = useState(0);
   const [allImagesFailed, setAllImagesFailed] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+
+  const handleDownloadPdf = async () => {
+    if (!scan) return;
+    setDownloadError(null);
+    try {
+      await apiService.downloadPdfReport(scan.id);
+    } catch (err) {
+      console.error('PDF download failed:', err);
+      setDownloadError('Could not download the PDF report. Please try again.');
+    }
+  };
+
+  const handleDownloadDocx = async () => {
+    if (!scan) return;
+    setDownloadError(null);
+    try {
+      await apiService.downloadDocxReport(scan.id);
+    } catch (err) {
+      console.error('DOCX download failed:', err);
+      setDownloadError('Could not download the DOCX report. Please try again.');
+    }
+  };
 
   useEffect(() => {
     const fetchScanDetails = async () => {
@@ -301,20 +324,27 @@ const ReportViewPage: React.FC = () => {
         
         {/* Export Buttons */}
         <div className="flex gap-2.5 self-end sm:self-center">
-          <button 
-            onClick={() => apiService.downloadPdfReport(scan.id)}
+          <button
+            onClick={handleDownloadPdf}
             className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold bg-red-600 text-white hover:bg-red-700 rounded-lg shadow-sm transition-colors"
           >
             <FileText className="w-4 h-4" /> Export PDF
           </button>
-          <button 
-            onClick={() => apiService.downloadDocxReport(scan.id)}
+          <button
+            onClick={handleDownloadDocx}
             className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 rounded-lg shadow-sm transition-colors"
           >
             <Download className="w-4 h-4" /> Export DOCX
           </button>
         </div>
       </div>
+
+      {downloadError && (
+        <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-md flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" />
+          <p className="text-red-700 text-sm">{downloadError}</p>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column: Image + Compliance Score */}

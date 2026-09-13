@@ -5,13 +5,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from ..models.database import get_db, Scan, ExtractedField, Violation
+from ..models.schemas import UserResponse
 from ..services.report_generator import generate_pdf_report, generate_docx_report
 from ..config import UPLOAD_DIR
+from .auth import get_current_user
 
 router = APIRouter()
 
 @router.get("/{scan_id}/pdf")
-async def get_pdf_report(scan_id: int, db: AsyncSession = Depends(get_db)):
+async def get_pdf_report(
+    scan_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: UserResponse = Depends(get_current_user),
+):
     result = await db.execute(select(Scan).where(Scan.id == scan_id))
     scan = result.scalars().first()
     if not scan:
@@ -26,7 +32,11 @@ async def get_pdf_report(scan_id: int, db: AsyncSession = Depends(get_db)):
     return FileResponse(filepath, filename=os.path.basename(filepath), media_type='application/pdf')
 
 @router.get("/{scan_id}/docx")
-async def get_docx_report(scan_id: int, db: AsyncSession = Depends(get_db)):
+async def get_docx_report(
+    scan_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: UserResponse = Depends(get_current_user),
+):
     result = await db.execute(select(Scan).where(Scan.id == scan_id))
     scan = result.scalars().first()
     if not scan:

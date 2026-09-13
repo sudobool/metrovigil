@@ -33,6 +33,20 @@ This single command:
 
 ---
 
+## 🔐 Demo Login
+
+All API endpoints now require a logged-in user (previously the API was wide open). Use one of the three demo accounts shown on the login screen:
+
+| Role | Username | Password |
+|------|----------|----------|
+| Administrator | `admin` | `admin123` |
+| Enforcement Officer | `officer` | `officer123` |
+| Retailer / Seller | `retailer` | `retailer123` |
+
+No `SECRET_KEY` setup is required for local/demo use — one is generated automatically at startup (this just means everyone is logged out on a server restart). For a real deployment, set `SECRET_KEY` in your environment instead (see `.env.example`).
+
+---
+
 ## 🧪 Testing with Sample Labels
 
 Four pre-generated, realistic Indian product label images are provided in `sample_labels/`:

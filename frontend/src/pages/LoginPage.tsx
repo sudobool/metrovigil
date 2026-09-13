@@ -92,14 +92,16 @@ const LoginPage: React.FC = () => {
     setLoading(true);
     setError('');
     try {
-      const response = await apiService.login(username.trim(), selectedRole);
+      const response = await apiService.login(username.trim(), password, selectedRole);
       login(response.user);
-      // Route to role-specific dashboard
-      if (selectedRole === 'admin') navigate('/admin/dashboard');
-      else if (selectedRole === 'retailer') navigate('/retailer/dashboard');
+      // Route based on the role the server actually assigned, not just
+      // whichever tile was selected in the UI.
+      if (response.user.role === 'admin') navigate('/admin/dashboard');
+      else if (response.user.role === 'retailer') navigate('/retailer/dashboard');
       else navigate('/dashboard');
-    } catch {
-      setError('Login failed. Please check your credentials.');
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail;
+      setError(detail || 'Login failed. Please check your username and password.');
     } finally {
       setLoading(false);
     }
@@ -274,23 +276,10 @@ const LoginPage: React.FC = () => {
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
               ) : (
-                <>Secure Login <ChevronRight className="w-4 h-4" /></>
+                <>Login <ChevronRight className="w-4 h-4" /></>
               )}
             </button>
           </form>
-
-          {/* Demo Credentials Box */}
-          <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-xl">
-            <p className="text-xs font-bold text-amber-800 uppercase tracking-wider mb-2">🎓 SIH Demo Credentials</p>
-            <div className="space-y-1">
-              {ROLES.map(r => (
-                <div key={r.key} className="flex items-center justify-between text-xs">
-                  <span className={`px-2 py-0.5 rounded-full border font-medium text-[11px] ${r.badgeColor}`}>{r.label}</span>
-                  <span className="font-mono text-gray-600">{r.demoUser} / {r.demoPass}</span>
-                </div>
-              ))}
-            </div>
-          </div>
 
           <p className="mt-6 text-center text-xs text-gray-400">
             Ministry of Consumer Affairs, Govt. of India • Smart India Hackathon 2026
